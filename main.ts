@@ -4,7 +4,7 @@
 // vendor/makefun-frontend.ts (the kit's library, unchanged).
 // Node 22 standard library only; no network, no install step.
 
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDossier } from "./vendor/makefun-frontend.ts";
@@ -17,8 +17,14 @@ const outDir = process.env.MAKEFUN_OUTPUT_DIR
 
 function main() {
   // Start from a clean output directory so the two grader runs agree.
-  rmSync(outDir, { recursive: true, force: true });
+  // The grader bind-mounts the output directory (e.g. /output), so the
+  // directory itself must NOT be removed — rmSync on a mount point
+  // throws (a mount point cannot be removed). Keep the directory and
+  // remove only its contents instead.
   mkdirSync(outDir, { recursive: true });
+  for (const child of readdirSync(outDir)) {
+    rmSync(join(outDir, child), { recursive: true, force: true });
+  }
 
   // The site itself, and its screenshots, copied whole.
   cpSync(join(repoRoot, "app"), join(outDir, "app"), { recursive: true });
